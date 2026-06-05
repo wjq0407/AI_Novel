@@ -1,8 +1,9 @@
 import React, { useState } from 'react'
-import { Card, Upload, Button, Input, Typography, message, Row, Col } from 'antd'
-import { InboxOutlined, ArrowRightOutlined } from '@ant-design/icons'
+import { Card, Upload, Button, Input, Typography, message, Row, Col, Alert } from 'antd'
+import { InboxOutlined, ArrowRightOutlined, CheckCircleOutlined } from '@ant-design/icons'
 import { useNavigate } from 'react-router-dom'
 import type { UploadFile } from 'antd/es/upload/interface'
+import { cleanText, getCleaningSummary } from '../services/TextCleaner'
 import './HomePage.css'
 
 const { Dragger } = Upload
@@ -13,6 +14,7 @@ const HomePage: React.FC = () => {
   const navigate = useNavigate()
   const [textContent, setTextContent] = useState<string>('')
   const [fileList, setFileList] = useState<UploadFile[]>([])
+  const [cleaningInfo, setCleaningInfo] = useState<string>('')
 
   // File reading is handled by customUpload
 
@@ -29,9 +31,11 @@ const HomePage: React.FC = () => {
     const { file, onSuccess, onError } = options
     const reader = new FileReader()
     reader.onload = (e) => {
-      const text = e.target?.result as string
+      const rawText = e.target?.result as string
+      const { text, stats } = cleanText(rawText)
       setTextContent(text)
-      message.success(`文件 "${(file as File).name}" 读取成功`)
+      setCleaningInfo(getCleaningSummary(stats))
+      message.success(`文件 "${(file as File).name}" 读取并清洗成功`)
       onSuccess?.('ok')
     }
     reader.onerror = () => {
@@ -74,6 +78,17 @@ const HomePage: React.FC = () => {
         </Col>
         <Col xs={24} md={12}>
           <Card title="文本粘贴" size="small">
+            {cleaningInfo && (
+              <Alert
+                title={cleaningInfo}
+                type="success"
+                showIcon
+                icon={<CheckCircleOutlined />}
+                closable
+                style={{ marginBottom: 12 }}
+                onClose={() => setCleaningInfo('')}
+              />
+            )}
             <TextArea
               value={textContent}
               onChange={(e) => setTextContent(e.target.value)}

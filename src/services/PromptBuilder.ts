@@ -46,6 +46,7 @@ characters → 每个 character 包含 → name/role
 6. 为对话添加情感标签
 7. 旁白放在 narration 字段
 8. 保持原文的关键情节和人物性格
+9. **title 字段只保留章节标题本身，不要包含"第X章"等前缀**
 
 约束：
 - 只输出 YAML 格式内容，不要任何额外解释

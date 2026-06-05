@@ -5,6 +5,8 @@ import { useNavigate } from 'react-router-dom'
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter'
 import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism'
 import * as yaml from 'js-yaml'
+import JSZip from 'jszip'
+import { saveAs } from 'file-saver'
 import './PreviewPage.css'
 
 const { Title, Text } = Typography
@@ -14,15 +16,26 @@ interface Dialogue { speaker: string; content: string; emotion?: string; action?
 interface Scene { scene_id: string; location: string; time?: string; characters: SceneCharacter[]; dialogues: Dialogue[]; narration?: string }
 interface ScriptData { script: { title: string; source_chapter: number; scenes: Scene[] } }
 
+// Normalize title: remove chapter prefix like "第X章" or "Chapter X"
+function normalizeTitle(title: string, chapterId: number): string {
+  // Remove patterns like "第X章 ", "第一章 ", "Chapter 1 " etc.
+  return title
+    .replace(/^第[一二三四五六七八九十\d]+[章节回]\s*/, '')
+    .replace(/^Chapter\s+\d+\s*/i, '')
+    .trim() || `第 ${chapterId} 章`
+}
+
 // Fallback: normalize AI output that uses different field names
 function normalizeScript(data: any, chapterId: number): ScriptData {
   // Case 1: Correct format (script.scenes)
   if (data?.script?.scenes) {
-    return { ...data, script: { ...data.script, scenes: data.script.scenes || [], source_chapter: chapterId } } as ScriptData
+    const normalizedTitle = normalizeTitle(data.script.title || '', chapterId)
+    return { ...data, script: { ...data.script, title: normalizedTitle, scenes: data.script.scenes || [], source_chapter: chapterId } } as ScriptData
   }
   
   // Case 2: AI returns { title, characters, scenes } at root level
   if (data?.scenes) {
+    const normalizedTitle = normalizeTitle(data.title || '', chapterId)
     const normalizedScenes = data.scenes.map((s: any, i: number) => ({
       scene_id: `S${s.scene_id || s.scene || i + 1}`,
       location: s.location || s.place || '未知',
@@ -41,7 +54,7 @@ function normalizeScript(data: any, chapterId: number): ScriptData {
     }))
     return {
       script: {
-        title: data.title || `第 ${chapterId} 章`,
+        title: normalizedTitle,
         source_chapter: chapterId,
         scenes: normalizedScenes
       }
@@ -98,7 +111,7 @@ const PreviewPage: React.FC = () => {
     }
   }, [])
 
-  const handleExport = (script: ScriptData) => {
+  const handleExport = async (script: ScriptData) => {
     const yamlStr = yaml.dump(script, { indent: 2, lineWidth: -1 })
     const blob = new Blob([yamlStr], { type: 'text/yaml;charset=utf-8' })
     const url = URL.createObjectURL(blob)
@@ -112,6 +125,20 @@ const PreviewPage: React.FC = () => {
     message.success('导出成功')
   }
 
+  const handleExportAllZip = async () => {
+    if (scripts.length === 0) return
+    const zip = new JSZip()
+    const folder = zip.folder('剧本')!
+    for (const script of scripts) {
+      const yamlStr = yaml.dump(script, { indent: 2, lineWidth: -1 })
+      const fileName = `${script.script.title || `第${script.script.source_chapter}章`}.yaml`
+      folder.file(fileName, yamlStr)
+    }
+    const content = await zip.generateAsync({ type: 'blob' })
+    saveAs(content, '剧本全集.zip')
+    message.success(`已将 ${scripts.length} 个章节打包为 ZIP 文件`)
+  }
+
   const getCharacterStats = (script: ScriptData) => {
     const stats: Record<string, { role: string; scenes: number; dialogues: number }> = {}
     for (const scene of script.script.scenes) {
@@ -119,7 +146,7 @@ const PreviewPage: React.FC = () => {
         if (!stats[char.name]) stats[char.name] = { role: char.role, scenes: 0, dialogues: 0 }
         stats[char.name].scenes++
       }
-      for (const dialogue of scene.dialogues) {
+      for (const dialogue of scene.dialogues || []) {
         if (!stats[dialogue.speaker]) stats[dialogue.speaker] = { role: '未知', scenes: 0, dialogues: 0 }
         stats[dialogue.speaker].dialogues++
       }
@@ -141,26 +168,43 @@ const PreviewPage: React.FC = () => {
         <Space>
           <Button onClick={() => navigate('/')} icon={<ArrowLeftOutlined />}>返回输入</Button>
           <Button onClick={() => navigate('/convert')} icon={<ArrowLeftOutlined />}>返回转换</Button>
-          <Button type="primary" icon={<DownloadOutlined />} onClick={() => scripts.forEach(s => handleExport(s))} disabled={scripts.length === 0}>导出全部</Button>
+          <Button type="primary" icon={<DownloadOutlined />} onClick={handleExportAllZip} disabled={scripts.length === 0}>打包导出 (ZIP)</Button>
         </Space>
       </div>
 
-      {parseErrors.length > 0 && scripts.length === 0 && (
-        <Card title="转换结果（原始 YAML）" size="small" style={{ marginBottom: 16 }}>
+      {parseErrors.length > 0 && (
+        <Card title="转换结果" size="small" style={{ marginBottom: 16 }}>
           <Space orientation="vertical" style={{ width: '100%' }} size="middle">
-            {Object.entries(rawResults).map(([chapterId, yamlStr]) => (
-              <div key={chapterId}>
-                <Tag color="orange">第 {chapterId} 章</Tag>
-                <Text type="secondary"> 解析失败，显示原始 YAML</Text>
-                <pre style={{ background: '#f5f5f5', padding: 12, borderRadius: 4, fontSize: 12, overflow: 'auto', marginTop: 8 }}>
-                  {yamlStr}
-                </pre>
-              </div>
-            ))}
+            {Object.entries(rawResults).map(([chapterId, yamlStr]) => {
+              const error = parseErrors.find(e => e.startsWith(`第 ${chapterId} 章`))
+              return (
+                <div key={chapterId}>
+                  <Tag color={error ? 'orange' : 'green'}>第 {chapterId} 章</Tag>
+                  {error ? (
+                    <>
+                      <Text type="secondary"> 解析失败</Text>
+                      <div style={{ marginTop: 4 }}>
+                        <Text type="secondary" style={{ fontSize: 12 }}>{error}</Text>
+                      </div>
+                    </>
+                  ) : (
+                    <Text type="secondary"> 解析成功</Text>
+                  )}
+                  <details style={{ marginTop: 8 }}>
+                    <summary style={{ cursor: 'pointer', color: '#1890ff', fontSize: 12 }}>查看原始 YAML</summary>
+                    <pre style={{ background: '#f5f5f5', padding: 12, borderRadius: 4, fontSize: 12, overflow: 'auto', marginTop: 8 }}>
+                      {yamlStr}
+                    </pre>
+                  </details>
+                </div>
+              )
+            })}
           </Space>
-          <Text type="secondary" style={{ marginTop: 12, display: 'block' }}>
-            提示：请返回 AI 转换页面重新转换，或检查 API 返回的 YAML 格式是否正确
-          </Text>
+          {scripts.length === 0 && (
+            <Text type="secondary" style={{ marginTop: 12, display: 'block' }}>
+              提示：请返回 AI 转换页面重新转换，或检查 API 返回的 YAML 格式是否正确
+            </Text>
+          )}
         </Card>
       )}
 
@@ -187,7 +231,7 @@ const PreviewPage: React.FC = () => {
                 </Card>
 
                 <Card title="场景列表" size="small">
-                  {script.script.scenes.map((scene) => (
+                  {(script.script.scenes || []).map((scene) => (
                     <div key={scene.scene_id} className="scene-item">
                       <div className="scene-header">
                         <Text strong>{scene.scene_id}</Text>
@@ -195,7 +239,7 @@ const PreviewPage: React.FC = () => {
                         {scene.time && <Tag>{scene.time}</Tag>}
                       </div>
                       <div className="scene-dialogues">
-                        {scene.dialogues.map((dialogue, idx) => (
+                        {(scene.dialogues || []).map((dialogue, idx) => (
                           <div key={idx} className="dialogue-item">
                             <Text strong style={{ color: '#1890ff' }}>{dialogue.speaker}</Text>
                             {dialogue.emotion && <Tag color="orange" style={{ marginLeft: 8 }}>{dialogue.emotion}</Tag>}
