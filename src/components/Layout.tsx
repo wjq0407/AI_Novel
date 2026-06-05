@@ -1,7 +1,7 @@
 import React from 'react'
 import { Layout as AntLayout, Menu } from 'antd'
 import { useNavigate, useLocation } from 'react-router-dom'
-import { FileText, ConversionOutlined, EyeOutlined } from '@ant-design/icons'
+import { FileTextOutlined, SwapOutlined, EyeOutlined } from '@ant-design/icons'
 import './Layout.css'
 
 const { Header, Content, Footer } = AntLayout
@@ -15,8 +15,8 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
   const location = useLocation()
 
   const menuItems = [
-    { key: '/', icon: <FileText />, label: '小说输入' },
-    { key: '/convert', icon: <ConversionOutlined />, label: 'AI 转换' },
+    { key: '/', icon: <FileTextOutlined />, label: '小说输入' },
+    { key: '/convert', icon: <SwapOutlined />, label: 'AI 转换' },
     { key: '/preview', icon: <EyeOutlined />, label: '剧本预览' },
   ]
 
