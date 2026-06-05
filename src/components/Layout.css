@@ -1,0 +1,6 @@
+.app-layout { min-height: 100vh; }
+.app-header { display: flex; align-items: center; padding: 0 24px; background: #001529; }
+.logo h1 { color: #fff; font-size: 20px; margin: 0; white-space: nowrap; }
+.app-menu { flex: 1; justify-content: flex-end; border-bottom: none; }
+.app-content { padding: 24px; min-height: calc(100vh - 134px); background: #f0f2f5; }
+.app-footer { text-align: center; background: #fff; padding: 16px; }
