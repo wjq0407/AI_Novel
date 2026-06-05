@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import { Card, Upload, Button, Input, Space, Typography, message, Row, Col } from 'antd'
+import { Card, Upload, Button, Input, Typography, message, Row, Col } from 'antd'
 import { InboxOutlined, ArrowRightOutlined } from '@ant-design/icons'
 import { useNavigate } from 'react-router-dom'
 import type { UploadFile } from 'antd/es/upload/interface'
@@ -14,19 +14,7 @@ const HomePage: React.FC = () => {
   const [textContent, setTextContent] = useState<string>('')
   const [fileList, setFileList] = useState<UploadFile[]>([])
 
-  const handleFileChange = (info: { file: UploadFile }) => {
-    const { file } = info
-    setFileList([file])
-    if (file.originFileObj) {
-      const reader = new FileReader()
-      reader.onload = (e) => {
-        setTextContent(e.target?.result as string)
-        message.success('文件读取成功')
-      }
-      reader.onerror = () => message.error('文件读取失败，请确保文件编码为 UTF-8')
-      reader.readAsText(file.originFileObj, 'UTF-8')
-    }
-  }
+  // File reading is handled by customUpload
 
   const handleNext = () => {
     if (!textContent.trim()) {
@@ -37,15 +25,36 @@ const HomePage: React.FC = () => {
     navigate('/convert')
   }
 
+  const customUpload = (options: any) => {
+    const { file, onSuccess, onError } = options
+    const reader = new FileReader()
+    reader.onload = (e) => {
+      const text = e.target?.result as string
+      setTextContent(text)
+      message.success(`文件 "${(file as File).name}" 读取成功`)
+      onSuccess?.('ok')
+    }
+    reader.onerror = () => {
+      message.error('文件读取失败，请确保文件编码为 UTF-8')
+      onError?.(new Error('文件读取失败'))
+    }
+    reader.readAsText(file as File, 'UTF-8')
+  }
+
   const uploadProps = {
     accept: '.txt',
     maxCount: 1,
+    customRequest: customUpload,
     beforeUpload: (file: File) => {
       if (file.size > 10 * 1024 * 1024) { message.error('文件大小不能超过 10MB'); return false }
       if (!file.name.endsWith('.txt')) { message.error('仅支持 .txt 格式文件'); return false }
-      return false
+      return true
     },
-    onChange: handleFileChange,
+    onChange: (info: { file: UploadFile }) => {
+      if (info.file.status === 'done') {
+        setFileList([info.file])
+      }
+    },
   }
 
   return (

@@ -2,8 +2,8 @@ import { buildPrompt } from './PromptBuilder'
 import { validateScript } from './SchemaValidator'
 
 const API_KEY = import.meta.env.VITE_AI_API_KEY || ''
-const API_URL = import.meta.env.VITE_AI_API_URL || 'https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions'
-const MODEL = import.meta.env.VITE_AI_MODEL || 'qwen-plus'
+const API_URL = import.meta.env.VITE_AI_API_URL || 'https://open.bigmodel.cn/api/paas/v4/chat/completions'
+const MODEL = import.meta.env.VITE_AI_MODEL || 'glm-4'
 
 export interface AIResponse {
   success: boolean
@@ -44,10 +44,18 @@ async function callAIAPI(prompt: string, retries = 2): Promise<AIResponse> {
 
       // Clean up YAML content - extract between code blocks if present
       let yamlContent = content.trim()
-      const yamlMatch = yamlContent.match(/```(?:yaml)?\s*\n([\s\S]*?)\n```/)
-      if (yamlMatch) {
-        yamlContent = yamlMatch[1].trim()
+      
+      // Extract YAML from code blocks (supports ```yaml, ```YAML, or just ```)
+      const codeBlockMatch = yamlContent.match(/```(?:yaml|YAML)?\s*([\s\S]*?)```/)
+      if (codeBlockMatch) {
+        yamlContent = codeBlockMatch[1].trim()
       }
+      
+      // Remove leading/trailing empty lines
+      yamlContent = yamlContent.replace(/^[\n\r]+|[\n\r]+$/g, '')
+      
+      console.log('AI 返回内容已清理, 长度:', yamlContent.length)
+      console.log('YAML 前100字符:', yamlContent.substring(0, 100))
 
       return { success: true, yamlContent }
     } catch (error) {
