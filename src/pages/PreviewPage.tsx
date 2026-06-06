@@ -1,12 +1,13 @@
 import React, { useState, useEffect } from 'react'
-import { Card, Tabs, Typography, Button, message, Space, Table, Tag } from 'antd'
-import { DownloadOutlined, ArrowLeftOutlined } from '@ant-design/icons'
+import { Card, Tabs, Typography, Button, message, Space, Table, Tag, Row, Col, Statistic } from 'antd'
+import { DownloadOutlined, ArrowLeftOutlined, FileTextOutlined, TeamOutlined, MessageOutlined, EnvironmentOutlined, BarChartOutlined, PieChartOutlined } from '@ant-design/icons'
 import { useNavigate } from 'react-router-dom'
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter'
 import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism'
 import * as yaml from 'js-yaml'
 import JSZip from 'jszip'
 import { saveAs } from 'file-saver'
+import { Column, Pie } from '@ant-design/charts'
 import './PreviewPage.css'
 
 const { Title, Text } = Typography
@@ -154,12 +155,90 @@ const PreviewPage: React.FC = () => {
     return Object.entries(stats).sort((a, b) => b[1].scenes - a[1].scenes).map(([name, data]) => ({ name, ...data }))
   }
 
+  // 获取场景地点分布数据
+  const getLocationStats = (script: ScriptData) => {
+    const stats: Record<string, number> = {}
+    for (const scene of script.script.scenes) {
+      const location = scene.location || '未知'
+      stats[location] = (stats[location] || 0) + 1
+    }
+    return Object.entries(stats)
+      .sort((a, b) => b[1] - a[1])
+      .map(([location, value]) => ({ type: location, value }))
+  }
+
+  // 获取角色出场柱状图数据（扁平化格式用于分组柱状图）
+  const getCharacterChartData = (script: ScriptData) => {
+    const charStats = getCharacterStats(script)
+    const data: { name: string; type: string; value: number }[] = []
+    charStats.forEach((c: any) => {
+      data.push({ name: c.name, type: '出场场景', value: c.scenes })
+      data.push({ name: c.name, type: '对话次数', value: c.dialogues })
+    })
+    return data
+  }
+
+  // 获取情感分布数据
+  const getEmotionStats = (script: ScriptData) => {
+    const stats: Record<string, number> = {}
+    for (const scene of script.script.scenes) {
+      for (const dialogue of scene.dialogues || []) {
+        if (dialogue.emotion) {
+          stats[dialogue.emotion] = (stats[dialogue.emotion] || 0) + 1
+        }
+      }
+    }
+    return Object.entries(stats)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 8) // 只显示前8种情感
+      .map(([type, value]) => ({ type, value }))
+  }
+
   const characterColumns = [
     { title: '角色名', dataIndex: 'name', key: 'name' },
     { title: '角色类型', dataIndex: 'role', key: 'role' },
     { title: '出场场景', dataIndex: 'scenes', key: 'scenes' },
     { title: '对话次数', dataIndex: 'dialogues', key: 'dialogues' },
   ]
+
+  // 柱状图配置
+  const columnChartConfig = (script: ScriptData) => ({
+    data: getCharacterChartData(script),
+    isGroup: true,
+    xField: 'name',
+    yField: 'value',
+    seriesField: 'type',
+    color: ['#1890ff', '#52c41a'],
+    label: {
+      position: 'top' as const,
+      layout: [
+        { type: 'interval-adjust-position' as const },
+        { type: 'interval-hide-overlap' as const }
+      ]
+    },
+    interactions: [{ type: 'active-region' as const }],
+    legend: { position: 'top' as const },
+    xAxis: {
+      label: {
+        autoRotate: true,
+        autoHide: { type: 'equidistance' as const, configuration: { minGap: 6 } }
+      }
+    },
+    yAxis: { title: { text: '数量' } },
+    height: 300,
+  })
+
+  // 饼图配置
+  const pieChartConfig = (data: any[], title: string) => ({
+    data,
+    angleField: 'value',
+    colorField: 'type',
+    radius: 0.8,
+    label: false,
+    interactions: [{ type: 'element-active' as const }],
+    legend: { position: 'right' as const },
+    height: 280,
+  })
 
   return (
     <div className="preview-page">
@@ -217,6 +296,74 @@ const PreviewPage: React.FC = () => {
             label: script.script.title,
             children: (
               <div className="script-content">
+                {/* 核心指标卡片 */}
+                <Row gutter={[16, 16]} style={{ marginBottom: 16 }}>
+                  <Col xs={12} sm={6}>
+                    <Card size="small" className="stat-card">
+                      <Statistic
+                        title="场景总数"
+                        value={script.script.scenes.length}
+                        prefix={<FileTextOutlined />}
+                        styles={{ content: { color: '#1890ff' } }}
+                      />
+                    </Card>
+                  </Col>
+                  <Col xs={12} sm={6}>
+                    <Card size="small" className="stat-card">
+                      <Statistic
+                        title="角色总数"
+                        value={getCharacterStats(script).length}
+                        prefix={<TeamOutlined />}
+                        styles={{ content: { color: '#52c41a' } }}
+                      />
+                    </Card>
+                  </Col>
+                  <Col xs={12} sm={6}>
+                    <Card size="small" className="stat-card">
+                      <Statistic
+                        title="对话总数"
+                        value={script.script.scenes.reduce((sum, s) => sum + (s.dialogues?.length || 0), 0)}
+                        prefix={<MessageOutlined />}
+                        styles={{ content: { color: '#faad14' } }}
+                      />
+                    </Card>
+                  </Col>
+                  <Col xs={12} sm={6}>
+                    <Card size="small" className="stat-card">
+                      <Statistic
+                        title="场景地点"
+                        value={new Set(script.script.scenes.map(s => s.location)).size}
+                        prefix={<BarChartOutlined />}
+                        styles={{ content: { color: '#722ed1' } }}
+                      />
+                    </Card>
+                  </Col>
+                </Row>
+
+                {/* 可视化图表区域 */}
+                <Row gutter={[16, 16]} style={{ marginBottom: 16 }}>
+                  <Col xs={24} md={12}>
+                    <Card title="角色出场统计" size="small">
+                      <Column {...columnChartConfig(script)} />
+                    </Card>
+                  </Col>
+                  <Col xs={24} md={12}>
+                    <Card title="场景地点分布" size="small">
+                      <Pie {...pieChartConfig(getLocationStats(script), '场景地点分布')} />
+                    </Card>
+                  </Col>
+                </Row>
+
+                {/* 情感分布（如果有数据） */}
+                {getEmotionStats(script).length > 0 && (
+                  <Card title="对话情感分布" size="small" style={{ marginBottom: 16 }}>
+                    <div style={{ height: 280, display: 'flex', justifyContent: 'center' }}>
+                      <Pie {...pieChartConfig(getEmotionStats(script), '情感分布')} />
+                    </div>
+                  </Card>
+                )}
+
+                {/* YAML 源码 */}
                 <Card title="YAML 源码" size="small" style={{ marginBottom: 16 }}>
                   <div style={{ maxHeight: 500, overflow: 'auto' }}>
                     <SyntaxHighlighter language="yaml" style={vscDarkPlus} customStyle={{ margin: 0, borderRadius: 4 }}>
@@ -226,10 +373,12 @@ const PreviewPage: React.FC = () => {
                   <Button type="link" icon={<DownloadOutlined />} onClick={() => handleExport(script)} style={{ marginTop: 8 }}>导出此章节</Button>
                 </Card>
 
-                <Card title="角色统计" size="small" style={{ marginBottom: 16 }}>
+                {/* 角色统计表格 */}
+                <Card title="角色详细数据" size="small" style={{ marginBottom: 16 }}>
                   <Table dataSource={getCharacterStats(script)} columns={characterColumns} rowKey="name" size="small" pagination={false} />
                 </Card>
 
+                {/* 场景列表 */}
                 <Card title="场景列表" size="small">
                   {(script.script.scenes || []).map((scene) => (
                     <div key={scene.scene_id} className="scene-item">
