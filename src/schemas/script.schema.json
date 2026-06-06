@@ -1,0 +1,98 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "剧本 YAML Schema",
+  "description": "AI 小说转剧本工具输出的结构化剧本格式定义",
+  "type": "object",
+  "required": ["script"],
+  "properties": {
+    "script": {
+      "type": "object",
+      "required": ["title", "source_chapter", "scenes"],
+      "properties": {
+        "title": {
+          "type": "string",
+          "description": "剧本标题（通常为章节名）"
+        },
+        "source_chapter": {
+          "type": "integer",
+          "description": "原小说章节序号",
+          "minimum": 1
+        },
+        "scenes": {
+          "type": "array",
+          "description": "场景列表",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "required": ["scene_id", "location", "characters"],
+            "properties": {
+              "scene_id": {
+                "type": "string",
+                "description": "场景唯一标识，格式如 S001",
+                "pattern": "^S\\d{3}$"
+              },
+              "location": {
+                "type": "string",
+                "description": "场景地点"
+              },
+              "time": {
+                "type": "string",
+                "description": "场景时间（可选）"
+              },
+              "characters": {
+                "type": "array",
+                "description": "出场角色列表",
+                "minItems": 1,
+                "items": {
+                  "type": "object",
+                  "required": ["name", "role"],
+                  "properties": {
+                    "name": {
+                      "type": "string",
+                      "description": "角色名称"
+                    },
+                    "role": {
+                      "type": "string",
+                      "description": "角色类型",
+                      "enum": ["主角", "配角", "龙套"]
+                    }
+                  }
+                }
+              },
+              "dialogues": {
+                "type": "array",
+                "description": "对话列表",
+                "items": {
+                  "type": "object",
+                  "required": ["speaker", "content"],
+                  "properties": {
+                    "speaker": {
+                      "type": "string",
+                      "description": "说话人"
+                    },
+                    "content": {
+                      "type": "string",
+                      "description": "对话内容"
+                    },
+                    "emotion": {
+                      "type": "string",
+                      "description": "情感标签（可选）"
+                    },
+                    "action": {
+                      "type": "string",
+                      "description": "伴随动作（可选）"
+                    }
+                  }
+                }
+              },
+              "narration": {
+                "type": "string",
+                "description": "旁白或环境描写（可选）"
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
