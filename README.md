@@ -10,10 +10,8 @@
 
 ### Demo 视频
 
-[![Demo Video](https://raw.githubusercontent.com/wjq0407/AI_Novel/main/demo.mp4)](https://raw.githubusercontent.com/wjq0407/AI_Novel/main/demo.mp4)
-
-<video width="800" controls>
-  <source src="https://raw.githubusercontent.com/wjq0407/AI_Novel/main/demo.mp4" type="video/mp4">
+<video width="800" controls src="https://github.com/wjq0407/AI_Novel/raw/main/demo.mp4">
+  您的浏览器不支持 HTML5 视频播放，[点击下载 Demo 视频](https://github.com/wjq0407/AI_Novel/raw/main/demo.mp4)
 </video>
 
 ## 功能特性
