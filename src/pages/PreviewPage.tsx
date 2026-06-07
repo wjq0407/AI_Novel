@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { Card, Tabs, Typography, Button, message, Space, Table, Tag, Row, Col, Statistic } from 'antd'
-import { DownloadOutlined, ArrowLeftOutlined, FileTextOutlined, TeamOutlined, MessageOutlined, EnvironmentOutlined, BarChartOutlined, PieChartOutlined } from '@ant-design/icons'
+import { DownloadOutlined, ArrowLeftOutlined, FileTextOutlined, TeamOutlined, MessageOutlined, BarChartOutlined } from '@ant-design/icons'
 import { useNavigate } from 'react-router-dom'
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter'
 import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism'
@@ -229,7 +229,7 @@ const PreviewPage: React.FC = () => {
   })
 
   // 饼图配置
-  const pieChartConfig = (data: any[], title: string) => ({
+  const pieChartConfig = (data: any[]) => ({
     data,
     angleField: 'value',
     colorField: 'type',
@@ -358,7 +358,7 @@ const PreviewPage: React.FC = () => {
                 {getEmotionStats(script).length > 0 && (
                   <Card title="对话情感分布" size="small" style={{ marginBottom: 16 }}>
                     <div style={{ height: 280, display: 'flex', justifyContent: 'center' }}>
-                      <Pie {...pieChartConfig(getEmotionStats(script), '情感分布')} />
+                      <Pie {...pieChartConfig(getEmotionStats(script))} />
                     </div>
                   </Card>
                 )}

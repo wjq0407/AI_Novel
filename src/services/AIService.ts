@@ -168,7 +168,7 @@ function fixYamlContent(yamlStr: string): string {
   result = deduped.join('\n')
   
   // Step 5: Fix quoted strings with unescaped inner quotes
-  result = result.replace(/:\s*"([^"]*)\s+"([^"]+)"\s+([^"]*)"$/gm, (match, before, inner, after) => {
+  result = result.replace(/:\s*"([^"]*)\s+"([^"]+)"\s+([^"]*)"$/gm, (_match, before, inner, after) => {
     return `: "${before} \\"${inner}\\" ${after}"`
   })
   
