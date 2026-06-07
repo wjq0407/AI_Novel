@@ -10,7 +10,9 @@
 
 ### Demo 视频
 
-https://github.com/wjq0407/AI_Novel/raw/main/demo.mp4
+[观看 Demo 视频 (B站)](https://www.bilibili.com/video/BV1BjEb6fEej/)
+
+视频文件：[demo.mp4](https://github.com/wjq0407/AI_Novel/raw/main/demo.mp4)
 
 ## 功能特性
 
