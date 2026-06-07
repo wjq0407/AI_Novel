@@ -349,7 +349,7 @@ const PreviewPage: React.FC = () => {
                   </Col>
                   <Col xs={24} md={12}>
                     <Card title="场景地点分布" size="small">
-                      <Pie {...pieChartConfig(getLocationStats(script), '场景地点分布')} />
+                      <Pie {...pieChartConfig(getLocationStats(script))} />
                     </Card>
                   </Col>
                 </Row>
