@@ -6,7 +6,15 @@
 
 ## 在线演示
 
-[在线演示地址](待部署)
+[在线演示地址](https://wjq0407.github.io/AI_Novel/)
+
+### Demo 视频
+
+[![Demo Video](https://raw.githubusercontent.com/wjq0407/AI_Novel/main/demo.mp4)](https://raw.githubusercontent.com/wjq0407/AI_Novel/main/demo.mp4)
+
+<video width="800" controls>
+  <source src="https://raw.githubusercontent.com/wjq0407/AI_Novel/main/demo.mp4" type="video/mp4">
+</video>
 
 ## 功能特性
 
